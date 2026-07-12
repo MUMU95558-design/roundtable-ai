@@ -944,22 +944,14 @@
       </button>
     </div>
     <div class="mb-4">
-      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">DeepSeek API Key <span class="opacity-40">(官方，推荐)</span></label>
+      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">AI API Key</label>
       <input type="password" id="ds-api-key" placeholder="sk-..." class="w-full bg-white/70 border border-outline-variant/50 rounded-xl px-4 py-2.5 font-body-base text-sm text-on-surface focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all">
-      <p class="text-[11px] text-on-surface-variant mt-1">获取：<a href="https://platform.deepseek.com" target="_blank" class="text-primary underline">platform.deepseek.com</a></p>
-    </div>
-    <div class="mb-4">
-      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">SiliconFlow API Key <span class="opacity-40">(选填，使用国内模型)</span></label>
-      <input type="password" id="sf-api-key" placeholder="sk-..." class="w-full bg-white/70 border border-outline-variant/50 rounded-xl px-4 py-2.5 font-body-base text-sm text-on-surface focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all">
-      <p class="text-[11px] text-on-surface-variant mt-1">获取：<a href="https://cloud.siliconflow.cn" target="_blank" class="text-primary underline">cloud.siliconflow.cn</a></p>
-    </div>
-    <div class="mb-4">
-      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">Tavily Search Key <span class="opacity-40">(选填，启用网络搜索)</span></label>
-      <input type="password" id="tavily-api-key" placeholder="tvly-..." class="w-full bg-white/70 border border-outline-variant/50 rounded-xl px-4 py-2.5 font-body-base text-sm text-on-surface focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all">
+      <input type="hidden" id="newapi-key">
+      <p class="text-[11px] text-on-surface-variant mt-1">获取：<a href="https://platform.deepseek.com" target="_blank" class="text-primary underline">DeepSeek</a> / <a href="https://downstream.jbbtoken.cn/wallet" target="_blank" class="text-primary underline">New API</a></p>
     </div>
     <div class="mb-5">
-      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">AI 模型</label>
-      <select id="ai-model" class="w-full bg-white/70 border border-outline-variant/50 rounded-xl px-4 py-2.5 font-body-base text-sm text-on-surface focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all"></select>
+      <label class="block font-label-mono text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1.5">Tavily Search Key <span class="opacity-40">(选填，启用网络搜索)</span></label>
+      <input type="password" id="tavily-api-key" placeholder="tvly-..." class="w-full bg-white/70 border border-outline-variant/50 rounded-xl px-4 py-2.5 font-body-base text-sm text-on-surface focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all">
     </div>
     <div class="flex gap-3">
       <button id="settings-save" class="flex-1 bg-primary text-white py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]" style="font-family:'Plus Jakarta Sans',sans-serif">保存设置</button>
@@ -980,7 +972,7 @@
 <div id="no-key-bar" class="fixed top-16 left-drawer-width right-0 z-20 px-6 pt-3 hidden">
   <div class="max-w-[800px] mx-auto bg-amber-50 border border-amber-200/80 rounded-2xl px-5 py-2.5 flex items-center gap-3">
     <span class="material-symbols-outlined text-amber-500 text-[18px]">warning</span>
-    <span class="font-body-base text-sm text-amber-800 flex-1">请先填写 SiliconFlow API Key 才能开始对话</span>
+    <span class="font-body-base text-sm text-amber-800 flex-1">请先填写 AI API Key 才能开始对话</span>
     <button onclick="openSettings()" class="text-sm font-bold text-primary hover:underline">去设置 →</button>
   </div>
 </div>
@@ -1357,33 +1349,38 @@ document.addEventListener('DOMContentLoaded', function () {
 /* ================================================================
    ROUNDTABLE ENGINE
 ================================================================ */
-const API_BASE = 'https://api.siliconflow.cn/v1';
+const NEWAPI_BASE = 'https://downstream.jbbtoken.cn/v1';
 const DEEPSEEK_BASE = 'https://api.deepseek.com/v1';
 const SK = { settings: 'rta_cfg', sessions: 'rta_sess', favs: 'rta_favs', usage: 'rta_usage', profileAnalysis: 'rta_pa' };
 
 const MODELS = [
+  // ── New API 网关 ──
+  { value: 'claude-sonnet-4.5',                    label: 'Claude Sonnet 4.5',     tag: 'New API', provider:'newapi' },
   // ── DeepSeek 官方 ──
-  { value: 'deepseek-chat',                        label: 'DeepSeek V3 (官方)',     tag: '推荐⚡',   provider:'deepseek' },
+  { value: 'deepseek-chat',                        label: 'DeepSeek V3 (官方)',     tag: 'DeepSeek', provider:'deepseek' },
   { value: 'deepseek-reasoner',                    label: 'DeepSeek R1 (官方)',     tag: '深度思考', provider:'deepseek' },
-  // ── DeepSeek · SiliconFlow ──
-  { value: 'deepseek-ai/DeepSeek-V4-Flash',        label: 'DeepSeek V4 Flash',     tag: 'SF·快' },
-  { value: 'deepseek-ai/DeepSeek-V3',              label: 'DeepSeek V3',           tag: 'SiliconFlow' },
-  { value: 'deepseek-ai/DeepSeek-R1',              label: 'DeepSeek R1',           tag: 'SiliconFlow' },
-  { value: 'Pro/deepseek-ai/DeepSeek-R1',          label: 'DeepSeek R1 (Pro)',     tag: 'SiliconFlow' },
-  // ── Qwen · SiliconFlow ──
-  { value: 'Qwen/Qwen3-235B-A22B',                 label: 'Qwen3 235B',            tag: 'SiliconFlow' },
-  { value: 'Qwen/Qwen3-30B-A3B',                   label: 'Qwen3 30B',             tag: 'SF·快' },
-  { value: 'Qwen/Qwen3-8B',                        label: 'Qwen3 8B',              tag: 'SF·轻量' },
-  { value: 'Qwen/Qwen2.5-72B-Instruct',            label: 'Qwen2.5 72B',           tag: 'SiliconFlow' },
-  // ── 其他 · SiliconFlow ──
-  { value: 'Pro/moonshotai/Kimi-K2.6',             label: 'Kimi K2.6 (Pro)',       tag: 'SiliconFlow' },
-  { value: 'Pro/zai-org/GLM-5.1',                  label: 'GLM-5.1 (Pro)',         tag: 'SiliconFlow' },
 ];
-function getAPIConf(modelVal){
+function getModelProvider(modelVal){
   const m=MODELS.find(x=>x.value===modelVal);
+  return m?.provider||'newapi';
+}
+function getAPIConf(modelVal){
   const c=cfg();
-  if(m?.provider==='deepseek') return {base:DEEPSEEK_BASE, key:c.deepseekKey};
-  return {base:API_BASE, key:c.siliconflowKey};
+  const provider=getModelProvider(modelVal);
+  if(provider==='deepseek') return {base:DEEPSEEK_BASE, key:c.deepseekKey};
+  return {base:NEWAPI_BASE, key:c.newapiKey};
+}
+function getProviderKey(c,provider){
+  if(provider==='deepseek')return c.deepseekKey||'';
+  return c.newapiKey||'';
+}
+function syncApiKeyInputForModel(modelVal){
+  const c=cfg();
+  const input=document.getElementById('ds-api-key');
+  const newapiHidden=document.getElementById('newapi-key');
+  if(newapiHidden)newapiHidden.value=c.newapiKey||'';
+  if(!input)return;
+  input.value=getProviderKey(c,getModelProvider(modelVal));
 }
 
 const AGENTS = [
@@ -1407,14 +1404,14 @@ const _decKey = s => { try { return s ? decodeURIComponent(escape(atob(s))) : ''
 function _encodeCfg(o) {
   const c = {...o};
   if(c.deepseekKey)   c.deepseekKey   = _encKey(c.deepseekKey);
-  if(c.siliconflowKey) c.siliconflowKey = _encKey(c.siliconflowKey);
+  if(c.newapiKey)    c.newapiKey    = _encKey(c.newapiKey);
   if(c.tavilyKey)     c.tavilyKey     = _encKey(c.tavilyKey);
   return c;
 }
 function _decodeCfg(o) {
   const c = {...o};
   if(c.deepseekKey)   c.deepseekKey   = _decKey(c.deepseekKey);
-  if(c.siliconflowKey) c.siliconflowKey = _decKey(c.siliconflowKey);
+  if(c.newapiKey)    c.newapiKey    = _decKey(c.newapiKey);
   if(c.tavilyKey)     c.tavilyKey     = _decKey(c.tavilyKey);
   return c;
 }
@@ -1435,7 +1432,7 @@ let sid = null, msgs = [], responding = false, ctrl = null, mentionIdx = -1;
 let chatMode = false, favsMode = false, profileMode = false, rightPanelOpen = false;
 let webSearchOn = false;
 let debateOn = false;
-const SEARCH_NATIVE = ['Pro/zai-org/GLM', 'Pro/moonshotai/Kimi'];
+const SEARCH_NATIVE = [];
 const nativeSearch = mv => SEARCH_NATIVE.some(p => mv.startsWith(p));
 
 /* ── Utils ── */
@@ -1485,7 +1482,7 @@ function toggleRightPanel() {
   else{panel.classList.remove('panel-open');main.style.marginRight='';wrap.style.right='';icon.textContent='right_panel_open';}
 }
 function updatePanelModel(){
-  const c=cfg();const cur=c.model||'deepseek-ai/DeepSeek-V4-Flash';const m=MODELS.find(x=>x.value===cur);
+  const c=cfg();const cur=c.model||'claude-sonnet-4.5';const m=MODELS.find(x=>x.value===cur);
   const el=document.getElementById('panel-model-name');if(el)el.textContent=m?m.label:cur.split('/').pop();
   const badge=document.getElementById('model-badge');if(badge)badge.textContent=cur.split('/').pop();
 }
@@ -1495,7 +1492,7 @@ function toggleModelPicker(){
   else{dd.classList.add('hidden');chevron.style.transform='';}
 }
 function renderModelPickerList(){
-  const c=cfg();const cur=c.model||'deepseek-ai/DeepSeek-V4-Flash';
+  const c=cfg();const cur=c.model||'claude-sonnet-4.5';
   document.getElementById('model-picker-list').innerHTML=MODELS.map(m=>`<div onclick="selectModel('${m.value}')" class="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer transition-colors ${m.value===cur?'bg-primary/6':'hover:bg-black/3'}"><span class="text-[12px] w-3 shrink-0" style="color:#6b38d4">${m.value===cur?'✦':''}</span><span class="font-body-base text-sm ${m.value===cur?'text-primary font-semibold':'text-on-surface'} flex-1 truncate">${m.label}</span>${m.tag?`<span class="text-[10px] font-label-mono text-on-surface-variant opacity-50 shrink-0">${m.tag}</span>`:''}</div>`).join('');
 }
 function selectModel(value){
@@ -1504,6 +1501,7 @@ function selectModel(value){
   document.getElementById('model-picker-chevron').style.transform='';
   updatePanelModel();checkKey();
   const sel=document.getElementById('ai-model');if(sel)sel.value=value;
+  syncApiKeyInputForModel(value);
   showToast('模型已切换：'+(MODELS.find(x=>x.value===value)?.label||value.split('/').pop()),true);
 }
 function renderPanelParticipants(){
@@ -1665,11 +1663,17 @@ async function fetchWebContext(query,key){
   }catch{}
   return '';
 }
+function getRuntimeContext(){
+  const now=new Date();
+  const dateText=now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const timeText=now.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,hour:'2-digit',minute:'2-digit'});
+  return `【当前真实时间】${dateText} ${timeText}，时区：Asia/Shanghai。涉及“今天、昨天、明天、现在、最近”等相对时间问题时，必须以此为准，不要凭模型记忆猜日期。`;
+}
 
 /* ── Chat logic ── */
 async function doSend(){
   const inp=document.getElementById('chat-input');const text=inp.value.trim();if(!text||responding)return;
-  const c=cfg();if(!c.deepseekKey&&!c.siliconflowKey){showToast('请先配置 API Key');openSettings();return;}
+  const c=cfg();if(!c.deepseekKey&&!c.newapiKey){showToast('请先配置 API Key');openSettings();return;}
   if(!chatMode)enterChatMode();if(!sid)sid=uid();inp.value='';resize(inp);
   const um={id:uid(),role:'user',content:text,ts:Date.now()};msgs.push(um);
   const mentioned=parseMentions(text);const pool=mentioned.length?AGENTS.filter(a=>mentioned.includes(a.id)):getActiveAgents();
@@ -1683,7 +1687,7 @@ async function doSend(){
     if(sendBtn){sendBtn.disabled=true;}
     if(sendIcon){sendIcon.textContent='language';}
     showToast('🌐 正在联网搜索...', true);
-    webCtx=await fetchWebContext(text,c.siliconflowKey||c.deepseekKey);
+    webCtx=await fetchWebContext(text,c.newapiKey||c.deepseekKey);
     if(!webCtx)showToast('⚠️ 联网搜索失败，以模型自身知识作答');
     else showToast('✅ 联网搜索完成，正在生成回答', true);
   }
@@ -1726,51 +1730,55 @@ async function doSend(){
   finally{responding=false;ctrl=null;setSendBtn();}
 }
 async function streamOne(agent,ctxMsgs,mid,c,webCtx='',debateRound=''){
-  const modelVal=c.model||'deepseek-ai/DeepSeek-V4-Flash';
+  const modelVal=c.model||'claude-sonnet-4.5';
   const debateInject=debateRound==='debate_r1'
     ?'\n\n【辩论模式·第一轮·初始立场】你必须旗帜鲜明地亮出你的核心立场，直接切入，不许模糊、不许骑墙。你的个人立场是什么？为什么？'
     :debateRound==='debate_r2'
     ?'\n\n【辩论模式·第二轮·交叉反驳】你已看到其他所有参与者的初始立场。你必须直接点名至少一位其他参与者，针对他的具体论点进行有力反驳，阐明你为何不同意。禁止补充式附和，禁止和稀泥，必须有实质性争锋。'
     :'';
+  const runtimeCtxBlock='\n\n'+getRuntimeContext();
   const searchCtxBlock=webCtx?`\n\n【实时联网搜索结果（基于此作答，可引用其中数据）】\n${webCtx}\n【搜索结果结束】`:'';
   const startTime=Date.now();let firstToken=false,isReasoning=false;
   const waitTimer=setInterval(()=>{if(firstToken)return;const s=Math.round((Date.now()-startTime)/1000);const el=document.getElementById(`badge-${mid}`);if(el)el.textContent=isReasoning?`思考中 ${s}s…`:`连接中 ${s}s…`;},500);
   try{
-    const body={model:modelVal,messages:[{role:'system',content:agent.prompt+debateInject+'\n\n【输出硬性规则】① 禁止使用**或任何Markdown符号，强调用"引号"代替。② 总字数严格不超过200字。③ 禁止自我介绍、套话开头、总结段，直接给出核心判断。④ 用该人物的语气和思维方式直接作答，不加任何免责前缀。'+searchCtxBlock},...ctxMsgs],stream:true,stream_options:{include_usage:true},max_tokens:400,temperature:0.75};
+    const body={model:modelVal,messages:[{role:'system',content:agent.prompt+debateInject+runtimeCtxBlock+'\n\n【输出硬性规则】① 禁止使用**或任何Markdown符号，强调用"引号"代替。② 总字数严格不超过200字。③ 禁止自我介绍、套话开头、总结段，直接给出核心判断。④ 用该人物的语气和思维方式直接作答，不加任何免责前缀。'+searchCtxBlock},...ctxMsgs],stream:true,stream_options:{include_usage:true},max_tokens:400,temperature:0.75};
     const {base:apiBase,key:apiKey}=getAPIConf(modelVal);
     const res=await fetch(`${apiBase}/chat/completions`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify(body),signal:ctrl.signal});
     if(!res.ok){let em=`HTTP ${res.status}`;try{const j=await res.json();em=j.error?.message||j.message||em;}catch{}throw new Error(em);}
     const reader=res.body.getReader();const dec=new TextDecoder();let buf='',content='';let usageTracked=false;
     while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop()||'';for(const ln of lines){if(!ln.startsWith('data: '))continue;const raw=ln.slice(6).trim();if(raw==='[DONE]')continue;try{const parsed=JSON.parse(raw);
 /* 只在 final usage chunk 时累计：choices 为空数组、null 或不存在时视为 final chunk */
-if(parsed.usage&&(!parsed.choices||(Array.isArray(parsed.choices)&&parsed.choices.length===0))){accumulateUsage(parsed.usage,c.model||'deepseek-ai/DeepSeek-V4-Flash');usageTracked=true;}
+if(parsed.usage&&(!parsed.choices||(Array.isArray(parsed.choices)&&parsed.choices.length===0))){accumulateUsage(parsed.usage,c.model||'claude-sonnet-4.5');usageTracked=true;}
 const delta=parsed.choices?.[0]?.delta||{};if(delta.reasoning_content&&!firstToken)isReasoning=true;const text=delta.content||'';if(text){if(!firstToken){firstToken=true;clearInterval(waitTimer);patchStatus(mid,'streaming');}content+=text;const m=msgs.find(x=>x.id===mid);if(m)m.content=content;patchContent(mid,content);scrollBottom();}}catch{}}}
     /* API 未返回 usage chunk 时（如 DeepSeek 官方），按内容长度估算 token */
     if(!usageTracked&&content.length>0){
       const outTokens=Math.round(content.length/1.8);
       const inTokens=Math.round((ctxMsgs.reduce((s,m)=>s+(m.content||'').length,0)+agent.prompt.length)/1.8);
-      accumulateUsage({prompt_tokens:inTokens,completion_tokens:outTokens},c.model||'deepseek-chat');
+      accumulateUsage({prompt_tokens:inTokens,completion_tokens:outTokens},c.model||'claude-sonnet-4.5');
     }
   }finally{clearInterval(waitTimer);}
   const m=msgs.find(x=>x.id===mid);if(m)m.status='completed';patchStatus(mid,'completed');
 }
-function setSendBtn(){const btn=document.getElementById('send-btn');const ic=document.getElementById('send-icon');if(!btn||!ic)return;if(responding){btn.disabled=false;ic.textContent='stop';btn.onclick=()=>{ctrl?.abort();};}else{const c=cfg();btn.disabled=!(c.deepseekKey||c.siliconflowKey);ic.textContent='arrow_upward';btn.onclick=doSend;}}
+function setSendBtn(){const btn=document.getElementById('send-btn');const ic=document.getElementById('send-icon');if(!btn||!ic)return;if(responding){btn.disabled=false;ic.textContent='stop';btn.onclick=()=>{ctrl?.abort();};}else{const c=cfg();btn.disabled=!(c.deepseekKey||c.newapiKey);ic.textContent='arrow_upward';btn.onclick=doSend;}}
 
 /* ── Settings ── */
 function openSettings(){
-  const c=cfg();document.getElementById('ds-api-key').value=c.deepseekKey||'';document.getElementById('sf-api-key').value=c.siliconflowKey||'';document.getElementById('tavily-api-key').value=c.tavilyKey||'';
-  const sel=document.getElementById('ai-model');if(!sel.options.length){MODELS.forEach(m=>{const opt=document.createElement('option');opt.value=m.value;opt.textContent=m.label+(m.tag?' — '+m.tag:'');sel.appendChild(opt);});}
-  if(c.model)sel.value=c.model;const m=document.getElementById('settings-modal');m.classList.remove('hidden');m.classList.add('flex');
+  const c=cfg();document.getElementById('tavily-api-key').value=c.tavilyKey||'';
+  syncApiKeyInputForModel(c.model||'claude-sonnet-4.5');
+  const m=document.getElementById('settings-modal');m.classList.remove('hidden');m.classList.add('flex');
 }
 function closeSettings(){const m=document.getElementById('settings-modal');m.classList.add('hidden');m.classList.remove('flex');}
 function doSaveSettings(){
-  const dsk=document.getElementById('ds-api-key').value.trim();
-  const sfk=document.getElementById('sf-api-key').value.trim();
-  if(!dsk&&!sfk){showToast('至少填一个 API Key');return;}
-  saveCfg({deepseekKey:dsk,siliconflowKey:sfk,tavilyKey:document.getElementById('tavily-api-key').value.trim(),model:document.getElementById('ai-model').value});closeSettings();checkKey();showToast('设置已保存 ✓',true);
+  const c=cfg();
+  const selectedModel=c.model||'claude-sonnet-4.5';
+  const apiKey=document.getElementById('ds-api-key').value.trim();
+  let dsk=c.deepseekKey||'',newapi=c.newapiKey||'';
+  if(getModelProvider(selectedModel)==='deepseek')dsk=apiKey;else newapi=apiKey;
+  if(!apiKey){showToast('请填写当前模型对应的 AI API Key');return;}
+  saveCfg({deepseekKey:dsk,newapiKey:newapi,tavilyKey:document.getElementById('tavily-api-key').value.trim(),model:selectedModel});closeSettings();checkKey();showToast('设置已保存 ✓',true);
 }
 function doClearData(){if(!confirm('确认清除所有对话记录？(API Key 和设置将保留)'))return;localStorage.removeItem(SK.sessions);sid=null;msgs=[];if(!profileMode)renderMsgs();renderHistory();closeSettings();if(profileMode)renderProfileView();showToast('数据已清除',true);}
-function checkKey(){const c=cfg();const hasKey=!!(c.deepseekKey||c.siliconflowKey);document.getElementById('no-key-bar').classList.toggle('hidden',hasKey);const badge=document.getElementById('model-badge');if(badge&&c.model)badge.textContent=c.model.split('/').pop();updatePanelModel();setSendBtn();}
+function checkKey(){const c=cfg();const hasKey=!!(c.deepseekKey||c.newapiKey);document.getElementById('no-key-bar').classList.toggle('hidden',hasKey);const badge=document.getElementById('model-badge');if(badge&&c.model)badge.textContent=c.model.split('/').pop();updatePanelModel();setSendBtn();}
 
 /* ── @mention popup ── */
 function renderMentionList(){document.getElementById('mention-list').innerHTML=AGENTS.map((a,i)=>`<div class="mention-item px-3 py-2.5 flex items-center gap-3 cursor-pointer transition-all ${i===mentionIdx?'bg-primary/8':'hover:bg-white/60'}" onclick="pickMention('${a.id}')"><div class="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center" style="border:2px solid ${a.color}44;background:${a.color}12;flex-shrink:0"><img src="${a.avatar}" alt="${a.name}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1rem\\'>${a.emoji}</span>'"></div><div class="flex-1 min-w-0"><div class="text-[13px] font-bold text-on-surface leading-tight">${a.name}</div><div class="text-[11px] mt-0.5" style="color:${a.color};opacity:0.8">${a.role}</div></div>${i===mentionIdx?`<span class="material-symbols-outlined text-[14px] shrink-0" style="color:${a.color}">chevron_right</span>`:''}</div>`).join('');}
@@ -1791,11 +1799,11 @@ function renderProfileView(){
   const pv=document.getElementById('profile-view');if(!pv)return;
   const c=cfg();const sessions=getSessions();const favs=getFavs();const allUserMsgs=sessions.reduce((n,s)=>n+(s.messages||[]).filter(m=>m.role==='user').length,0);
   const displayName=c.displayName||'我的圆桌';const replyStyle=c.replyStyle||'concise';const disabled=c.disabledAgents||[];
-  const modelVal=c.model||'deepseek-ai/DeepSeek-V4-Flash';const modelObj=MODELS.find(x=>x.value===modelVal);const modelLabel=modelObj?modelObj.label:modelVal.split('/').pop();
+  const modelVal=c.model||'claude-sonnet-4.5';const modelObj=MODELS.find(x=>x.value===modelVal);const modelLabel=modelObj?modelObj.label:modelVal.split('/').pop();
   // 根据当前模型判断用的是哪个 provider
   const curModel=MODELS.find(x=>x.value===(c.model||''));
-  const curProvider=curModel?.provider==='deepseek'?'DeepSeek 官方':curModel?.tag||'SiliconFlow';
-  const curKey=(curModel?.provider==='deepseek'?c.deepseekKey:c.siliconflowKey)||'';
+  const curProvider=curModel?.provider==='deepseek'?'DeepSeek 官方':curModel?.provider==='newapi'?'New API':(curModel?.tag||'New API');
+  const curKey=getProviderKey(c,curModel?.provider||getModelProvider(c.model||'claude-sonnet-4.5'))||'';
   const maskedKey=curKey.length>10?curKey.slice(0,6)+'••••••••••'+curKey.slice(-4):curKey?'••••••••':'未配置';
   const usage=getUsage();const pa=getProfileAnalysis();
   const toggleHtml=AGENTS.map(a=>{const on=!disabled.includes(a.id);const bg=on?'#6b38d4':'rgba(0,0,0,0.15)';const knobML=on?'margin-left:auto':'margin-left:2px';return`<div style="display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="position:relative;width:72px;height:72px;"><img src="${a.avatar}" alt="${a.name}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid ${a.color}44;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:${a.color}18;border:3px solid ${a.color}44\\'>${a.emoji}</div>')"><div id="ptoggle-${a.id}" onclick="toggleAgentPref('${a.id}')" data-on="${on?'1':'0'}" style="position:absolute;top:-4px;right:-4px;width:34px;height:19px;border-radius:999px;background:${bg};cursor:pointer;transition:background 0.2s;border:2px solid #fff;display:flex;align-items:center;padding:2px;"><div style="width:13px;height:13px;border-radius:50%;background:#fff;${knobML};transition:margin 0.2s;flex-shrink:0;"></div></div></div><div style="text-align:center;"><div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:${a.color}">${a.name.split('·').pop()||a.name}</div><div style="font-size:11px;color:#494454;opacity:0.55;margin-top:1px">${a.role}</div></div></div>`;}).join('');
@@ -1816,13 +1824,15 @@ async function doAiAnalysis(){
   const allMsgs=sessions.reduce((acc,s)=>acc.concat((s.messages||[]).filter(m=>m.role==='user')),[]);
   if(allMsgs.length<2){showToast('至少需要2次提问才能生成画像');return;}
   const c=cfg();
-  if(!c.siliconflowKey){showToast('请先配置 API Key');return;}
+  const modelVal=c.model||'claude-sonnet-4.5';
+  const {base:apiBase,key:apiKey}=getAPIConf(modelVal);
+  if(!apiKey){showToast('请先配置 API Key');return;}
   const btn=document.querySelector('[onclick="doAiAnalysis()"]');
   if(btn){btn.textContent='分析中…';btn.style.opacity='0.5';btn.style.pointerEvents='none';}
   const questions=allMsgs.slice(-30).map(m=>m.content).join('\n---\n');
   const prompt=`分析以下用户提问内容，生成决策画像。只返回JSON，不要任何其他文字：\n\n提问记录：\n${questions}\n\n返回格式：{"style":"决策风格（理性分析/直觉驱动/数据依赖/策略权衡 四选一）","risk":"风险偏好（保守/稳健/进取 三选一）","horizon":"时间视角（短期聚焦/中期规划/长远布局 三选一）","topics":["话题1","话题2","话题3"],"strength":"核心思维优势（8字以内）"}`;
   try{
-    const res=await fetch(`${API_BASE}/chat/completions`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${c.siliconflowKey}`},body:JSON.stringify({model:'deepseek-ai/DeepSeek-V4-Flash',messages:[{role:'user',content:prompt}],temperature:0.3,max_tokens:300})});
+    const res=await fetch(`${apiBase}/chat/completions`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:modelVal,messages:[{role:'user',content:prompt}],temperature:0.3,max_tokens:300})});
     const data=await res.json();
     const raw=data.choices?.[0]?.message?.content||'{}';
     const jsonStr=raw.match(/\{[\s\S]*?\}/)?.[0]||'{}';
@@ -1860,7 +1870,7 @@ inp.addEventListener('keydown',e=>{const open=!document.getElementById('mention-
 document.addEventListener('click',e=>{if(!e.target.closest('#mention-popup')&&!e.target.closest('#chat-input')&&!e.target.closest('#at-btn'))hideMentionPopup();if(!e.target.closest('#model-picker-wrap')){const dd=document.getElementById('model-picker-dropdown');if(dd&&!dd.classList.contains('hidden')){dd.classList.add('hidden');document.getElementById('model-picker-chevron').style.transform='';}}});
 
 /* ── RT Init ── */
-if(!localStorage.getItem(SK.settings)){saveCfg({deepseekKey:'',siliconflowKey:'',model:'deepseek-chat'});}renderHistory();
+if(!localStorage.getItem(SK.settings)){saveCfg({deepseekKey:'',newapiKey:'',model:'claude-sonnet-4.5'});}renderHistory();
 renderMsgs();
 checkKey();
 
@@ -2258,7 +2268,7 @@ function rcSetMsgStreaming(msgId,agentId,streaming){
 async function streamOneRoom(agent,messages,msgId,roomId,sessionId,signal){
   rcSetMsgStreaming(msgId,agent.id,true);
   const c=cfg();
-  const modelVal=c.model||'deepseek-ai/DeepSeek-V4-Flash';
+  const modelVal=c.model||'claude-sonnet-4.5';
   const {base,key}=getAPIConf(modelVal);
   let accumulated='';
   try{
@@ -2287,7 +2297,7 @@ async function doSendRoom(){
   const input=document.getElementById('rc-input');const text=input.value.trim();
   if(!text||!_rcCurrentRoom)return;
   const c=cfg();
-  if(!c.deepseekKey&&!c.siliconflowKey){showToast('请先配置 API Key，进入设置填写密钥');return;}
+  if(!c.deepseekKey&&!c.newapiKey){showToast('请先配置 API Key，进入设置填写密钥');return;}
   // Parse @mentions
   const mentionPattern=/@([一-龥·a-zA-Z]+)/g;const mentioned=[];let mm;
   while((mm=mentionPattern.exec(text))!==null){
@@ -2326,7 +2336,7 @@ async function doSendRoom(){
     const roundResponses=[];
     for(const agentId of agents){
       const agent=ROOM_AGENTS[agentId];if(!agent)continue;
-      const systemPrompt=_rcCurrentRoom.contextPrefix+'\n\n'+agent.systemPrompt;
+      const systemPrompt=_rcCurrentRoom.contextPrefix+'\n\n'+getRuntimeContext()+'\n\n'+agent.systemPrompt;
       const apiMessages=[{role:'system',content:systemPrompt}];
       contextMessages.forEach(cm=>{
         if(cm.role==='user')apiMessages.push({role:'user',content:cm.content});
@@ -2444,7 +2454,7 @@ function fillRoomInput(text){
 function openRoomSettings(){
   const c=cfg();
   document.getElementById('rc-cfg-deepseek').value=c.deepseekKey||'';
-  document.getElementById('rc-cfg-sf').value=c.siliconflowKey||'';
+  document.getElementById('rc-cfg-newapi').value=c.newapiKey||'';
   const sel=document.getElementById('rc-cfg-model');if(sel&&c.model)sel.value=c.model;
   document.getElementById('rc-settings-modal').style.display='flex';
 }
@@ -2452,7 +2462,7 @@ function closeRoomSettings(){document.getElementById('rc-settings-modal').style.
 function saveRoomSettings(){
   const c=cfg();
   c.deepseekKey=document.getElementById('rc-cfg-deepseek').value.trim();
-  c.siliconflowKey=document.getElementById('rc-cfg-sf').value.trim();
+  c.newapiKey=document.getElementById('rc-cfg-newapi').value.trim();
   c.model=document.getElementById('rc-cfg-model').value;
   saveCfg(c);closeRoomSettings();checkKey();showToast('设置已保存 ✓',true);
 }
@@ -2672,17 +2682,15 @@ function runDemo(){
         <input id="rc-cfg-deepseek" type="password" placeholder="sk-..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:14px;outline:none;font-family:'JetBrains Mono',monospace;transition:border-color 0.15s;box-sizing:border-box;" onfocus="this.style.borderColor='#6b38d4'" onblur="this.style.borderColor='rgba(0,0,0,0.12)'">
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:#494454;display:block;margin-bottom:6px;">SiliconFlow API Key</label>
-        <input id="rc-cfg-sf" type="password" placeholder="sk-..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:14px;outline:none;font-family:'JetBrains Mono',monospace;transition:border-color 0.15s;box-sizing:border-box;" onfocus="this.style.borderColor='#6b38d4'" onblur="this.style.borderColor='rgba(0,0,0,0.12)'">
+        <label style="font-size:13px;font-weight:600;color:#494454;display:block;margin-bottom:6px;">New API Key</label>
+        <input id="rc-cfg-newapi" type="password" placeholder="sk-..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:14px;outline:none;font-family:'JetBrains Mono',monospace;transition:border-color 0.15s;box-sizing:border-box;" onfocus="this.style.borderColor='#6b38d4'" onblur="this.style.borderColor='rgba(0,0,0,0.12)'">
       </div>
       <div>
         <label style="font-size:13px;font-weight:600;color:#494454;display:block;margin-bottom:6px;">模型选择</label>
         <select id="rc-cfg-model" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:14px;outline:none;background:#fff;cursor:pointer;transition:border-color 0.15s;box-sizing:border-box;" onfocus="this.style.borderColor='#6b38d4'" onblur="this.style.borderColor='rgba(0,0,0,0.12)'">
-          <option value="deepseek-chat">DeepSeek V3 官方 ⚡</option>
-          <option value="deepseek-ai/DeepSeek-V3">DeepSeek V3 (SiliconFlow)</option>
-          <option value="Qwen/Qwen3-235B-A22B">Qwen3 235B</option>
-          <option value="deepseek-ai/DeepSeek-V4-Flash">DeepSeek V4 Flash</option>
-          <option value="Pro/moonshotai/Kimi-K2.6">Kimi K2.6 (Pro)</option>
+          <option value="claude-sonnet-4.5">Claude Sonnet 4.5 (New API)</option>
+          <option value="deepseek-chat">DeepSeek V3 官方</option>
+          <option value="deepseek-reasoner">DeepSeek R1 官方</option>
         </select>
       </div>
       <button onclick="saveRoomSettings()" style="width:100%;background:linear-gradient(135deg,#6b38d4,#5312bc);color:#fff;border:none;border-radius:12px;padding:12px 0;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity 0.15s;font-family:'Plus Jakarta Sans',sans-serif;" onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='1'">保存设置</button>
