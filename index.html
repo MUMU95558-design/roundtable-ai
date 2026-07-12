@@ -1374,6 +1374,12 @@ function getProviderKey(c,provider){
   if(provider==='deepseek')return c.deepseekKey||'';
   return c.newapiKey||'';
 }
+function getCurrentModelValue(c){
+  return c.model||'claude-sonnet-4.5';
+}
+function getCurrentModelKey(c){
+  return getProviderKey(c,getModelProvider(getCurrentModelValue(c)));
+}
 function syncApiKeyInputForModel(modelVal){
   const c=cfg();
   const input=document.getElementById('ds-api-key');
@@ -1673,7 +1679,7 @@ function getRuntimeContext(){
 /* ── Chat logic ── */
 async function doSend(){
   const inp=document.getElementById('chat-input');const text=inp.value.trim();if(!text||responding)return;
-  const c=cfg();if(!c.deepseekKey&&!c.newapiKey){showToast('请先配置 API Key');openSettings();return;}
+  const c=cfg();if(!getCurrentModelKey(c)){showToast('请先配置当前模型对应的 AI API Key');openSettings();return;}
   if(!chatMode)enterChatMode();if(!sid)sid=uid();inp.value='';resize(inp);
   const um={id:uid(),role:'user',content:text,ts:Date.now()};msgs.push(um);
   const mentioned=parseMentions(text);const pool=mentioned.length?AGENTS.filter(a=>mentioned.includes(a.id)):getActiveAgents();
@@ -1759,7 +1765,7 @@ const delta=parsed.choices?.[0]?.delta||{};if(delta.reasoning_content&&!firstTok
   }finally{clearInterval(waitTimer);}
   const m=msgs.find(x=>x.id===mid);if(m)m.status='completed';patchStatus(mid,'completed');
 }
-function setSendBtn(){const btn=document.getElementById('send-btn');const ic=document.getElementById('send-icon');if(!btn||!ic)return;if(responding){btn.disabled=false;ic.textContent='stop';btn.onclick=()=>{ctrl?.abort();};}else{const c=cfg();btn.disabled=!(c.deepseekKey||c.newapiKey);ic.textContent='arrow_upward';btn.onclick=doSend;}}
+function setSendBtn(){const btn=document.getElementById('send-btn');const ic=document.getElementById('send-icon');if(!btn||!ic)return;if(responding){btn.disabled=false;ic.textContent='stop';btn.onclick=()=>{ctrl?.abort();};}else{const c=cfg();btn.disabled=!getCurrentModelKey(c);ic.textContent='arrow_upward';btn.onclick=doSend;}}
 
 /* ── Settings ── */
 function openSettings(){
@@ -1778,7 +1784,7 @@ function doSaveSettings(){
   saveCfg({deepseekKey:dsk,newapiKey:newapi,tavilyKey:document.getElementById('tavily-api-key').value.trim(),model:selectedModel});closeSettings();checkKey();showToast('设置已保存 ✓',true);
 }
 function doClearData(){if(!confirm('确认清除所有对话记录？(API Key 和设置将保留)'))return;localStorage.removeItem(SK.sessions);sid=null;msgs=[];if(!profileMode)renderMsgs();renderHistory();closeSettings();if(profileMode)renderProfileView();showToast('数据已清除',true);}
-function checkKey(){const c=cfg();const hasKey=!!(c.deepseekKey||c.newapiKey);document.getElementById('no-key-bar').classList.toggle('hidden',hasKey);const badge=document.getElementById('model-badge');if(badge&&c.model)badge.textContent=c.model.split('/').pop();updatePanelModel();setSendBtn();}
+function checkKey(){const c=cfg();const hasKey=!!getCurrentModelKey(c);document.getElementById('no-key-bar').classList.toggle('hidden',hasKey);const badge=document.getElementById('model-badge');if(badge&&c.model)badge.textContent=c.model.split('/').pop();updatePanelModel();setSendBtn();}
 
 /* ── @mention popup ── */
 function renderMentionList(){document.getElementById('mention-list').innerHTML=AGENTS.map((a,i)=>`<div class="mention-item px-3 py-2.5 flex items-center gap-3 cursor-pointer transition-all ${i===mentionIdx?'bg-primary/8':'hover:bg-white/60'}" onclick="pickMention('${a.id}')"><div class="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center" style="border:2px solid ${a.color}44;background:${a.color}12;flex-shrink:0"><img src="${a.avatar}" alt="${a.name}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1rem\\'>${a.emoji}</span>'"></div><div class="flex-1 min-w-0"><div class="text-[13px] font-bold text-on-surface leading-tight">${a.name}</div><div class="text-[11px] mt-0.5" style="color:${a.color};opacity:0.8">${a.role}</div></div>${i===mentionIdx?`<span class="material-symbols-outlined text-[14px] shrink-0" style="color:${a.color}">chevron_right</span>`:''}</div>`).join('');}
@@ -2297,7 +2303,7 @@ async function doSendRoom(){
   const input=document.getElementById('rc-input');const text=input.value.trim();
   if(!text||!_rcCurrentRoom)return;
   const c=cfg();
-  if(!c.deepseekKey&&!c.newapiKey){showToast('请先配置 API Key，进入设置填写密钥');return;}
+  if(!getCurrentModelKey(c)){showToast('请先配置当前模型对应的 AI API Key，进入设置填写密钥');return;}
   // Parse @mentions
   const mentionPattern=/@([一-龥·a-zA-Z]+)/g;const mentioned=[];let mm;
   while((mm=mentionPattern.exec(text))!==null){
